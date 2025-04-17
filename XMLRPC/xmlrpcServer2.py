@@ -14,7 +14,7 @@ class RequestHandler(SimpleXMLRPCRequestHandler):
 insult_list = ["Nyicris", "Cap de suro", "Estaquirot", "AIXAFAGUITARRES", "BRÈTOL", "CURT DE GAMBALS", "TANOCA", "TÒTIL", "GAMARÚS", "TAP DE BASSA", "CAGABANDÚRRIES", "Mosqueta morta", "Mort de gana", "POCA-SOLTA", "BANDARRA"]
 observers = []
 serverObservers = []
-ownURL = 'localhost/8000'
+ownURL = 'localhost/8001'
 
 # Cola de trabajo y resultados filtrados
 work_queue = queue.Queue()
@@ -40,7 +40,7 @@ def trabajador():
 threading.Thread(target=trabajador, daemon=True).start()
 
 # Crear servidor
-with SimpleXMLRPCServer(('localhost', 8000), requestHandler=RequestHandler) as server:
+with SimpleXMLRPCServer(('localhost', 8001), requestHandler=RequestHandler) as server:
     server.register_introspection_functions()
 
     # Método para añadir insultos
@@ -77,15 +77,6 @@ with SimpleXMLRPCServer(('localhost', 8000), requestHandler=RequestHandler) as s
         return f"You have been subscribed to the server {ownURL}"
 
     server.register_function(subscribe, 'subscribe')
-
-    
-    # Método para suscribirse a un observador
-    def subscribeServer(serverURL):
-        print(f"Observer: Attached a server: {serverURL}")
-        serverObservers.append(serverURL)
-        return f"You have been subscribed to the server {ownURL}"
-
-    server.register_function(subscribeServer, 'subscribeServer')
 
     # Método de notificación
     def notify(new_insult):
