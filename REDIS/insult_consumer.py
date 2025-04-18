@@ -1,18 +1,29 @@
 import pika
+import redis
 
-# Connect to RabbitMQ
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-channel = connection.channel()
+def main():
+    # Connect to Redis
+    r = redis.Redis(host='localhost', port=6379, db=0)
 
-# Declare a queue (ensure it exists)
-channel.queue_declare(queue='insult')
+    # Connect to RabbitMQ
+    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    channel = connection.channel()
 
-# Define the callback function
-def callback(ch, method, properties, body):
-    print(f" [x] Received {body.decode()}")
+    channel.queue_declare(queue='insults')
 
-# Consume messages
-channel.basic_consume(queue='insult', on_message_callback=callback, auto_ack=True)
+    def callback(ch, method, properties, body):
+        insult = body.decode('utf-8')
+        r.sadd('insults', insult)
 
-print(' [*] Waiting for messages. To exit, press CTRL+C')
-channel.start_consuming()
+    channel.basic_consume(queue='insults', on_message_callback=callback, auto_ack=True)
+
+    print('Waiting for insults. To exit press CTRL+C')
+    try:
+        channel.start_consuming()
+    except KeyboardInterrupt:
+        print("Consumer stopped.")
+    finally:
+        connection.close()
+
+if __name__ == '__main__':
+    main()

@@ -44,7 +44,7 @@ class Observable:
                 self.insult_list.append(insult)
                 print(f"Nuevo insulto añadido: {insult}")
                 self.notify(insult)
-                self.notifyServers(insult)
+                self.notifyServer(insult)
 
     def get_insults(self):
         return self.insult_list

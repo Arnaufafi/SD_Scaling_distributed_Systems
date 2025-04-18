@@ -1,19 +1,32 @@
 import pika
+import redis
+import time
+import random
 
-# Connect to RabbitMQ
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-channel = connection.channel()
+EXCHANGE_NAME = 'insult_broadcast'
 
-channel.queue_declare(queue='insult')
+def main():
+    # Connect to Redis
+    r = redis.Redis(host='localhost', port=6379, db=0)
 
-# Define the callback function
-def callback(ch, method, properties, body):
-    message = body.decode()
-    channel.exchange_declare(exchange='insult', exchange_type='fanout')
-    channel.basic_publish(exchange='insult', routing_key='', body=message)
-    print(f" [x] Sent '{message}'")
+    # Connect to RabbitMQ
+    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    channel = connection.channel()
 
-# Consume messages
-channel.basic_consume(queue='insult', on_message_callback=callback, auto_ack=True)
+    # Declare a fanout exchange
+    channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type='fanout')
 
-channel.start_consuming()
+    # Get all insults from Redis
+    insults = r.smembers('insults')
+
+    while True:
+        insult = random.sample(list(insults), 1)[0]
+        message = insult.decode('utf-8')
+        channel.basic_publish(exchange=EXCHANGE_NAME, routing_key='', body=message)
+        print(f"[Broadcaster] Sent: {message}")
+        time.sleep(5)  # Optional: Delay between messages
+        insults = r.smembers('insults')
+    connection.close()
+
+if __name__ == '__main__':
+    main()

@@ -1,25 +1,36 @@
 import pika
+import sys
 
-# Connect to RabbitMQ
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-channel = connection.channel()
+EXCHANGE_NAME = 'insult_broadcast'
 
-# Declare exchange
-channel.exchange_declare(exchange='insult', exchange_type='fanout')
+def main():
+    # Connect to RabbitMQ
+    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    channel = connection.channel()
 
-# Create a new temporary queue (random name, auto-delete when consumer disconnects)
-result = channel.queue_declare(queue='', exclusive=True)
-queue_name = result.method.queue
+    # Declare the same fanout exchange
+    channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type='fanout')
 
-# Bind the queue to the exchange
-channel.queue_bind(exchange='insult', queue=queue_name)
+    # Create a new, unique queue with a random name (exclusive, auto-deleted)
+    result = channel.queue_declare(queue='', exclusive=True)
+    queue_name = result.method.queue
 
-print(' [*] Waiting for messages. To exit, press CTRL+C')
+    # Bind it to the fanout exchange
+    channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name)
 
-# Define callback function
-def callback(ch, method, properties, body):
-    print(f" [x] Received {body.decode()}")
+    print(f"[Receiver] Waiting for insults... (Queue: {queue_name})")
 
-# Consume messages
-channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=True)
-channel.start_consuming()
+    def callback(ch, method, properties, body):
+        print(f"[Receiver] Got insult: {body.decode()}")
+
+    channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=True)
+
+    try:
+        channel.start_consuming()
+    except KeyboardInterrupt:
+        print("Receiver stopped.")
+        connection.close()
+        sys.exit(0)
+
+if __name__ == '__main__':
+    main()

@@ -6,7 +6,6 @@ import random
 
 NUM_CLIENTES = 500
 SERVER_NAMES = ["server1.observable", "server2.observable", "server3.observable"]
-OBSERVER_NAMES = ["observer1", "observer2"]
 
 fake_insults = [f"insult_{i}" for i in range(100)]
 sample_texts = [
@@ -44,17 +43,9 @@ def stress_test(n_nodes):
         ns = Pyro4.locateNS()
         main_server = Pyro4.Proxy(ns.lookup(server_names[0]))
 
-        for observer_name in OBSERVER_NAMES:
+        for i, name in enumerate(server_names[1:], start=1):
             try:
-                observer_uri = ns.lookup(observer_name)._pyroUri
-                main_server.register_observer(observer_uri)
-            except Exception as e:
-                print(f"No se pudo registrar observer {observer_name}: {e}")
-
-        for name in server_names[1:]:
-            try:
-                other_uri = ns.lookup(name)._pyroUri
-                main_server.register_observer(other_uri)
+                main_server.register_observer(server_names[0], server_names[i])
             except Exception as e:
                 print(f"No se pudo conectar servidor {name} al principal: {e}")
     except Exception as e:
