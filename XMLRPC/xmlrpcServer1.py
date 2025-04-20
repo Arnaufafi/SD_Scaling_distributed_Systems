@@ -20,6 +20,7 @@ ownURL = 'localhost/8000'
 work_queue = queue.Queue()
 filtered_results = []
 
+
 # Función para censurar insultos
 def censurar_insultos(text):
     censored = text

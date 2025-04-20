@@ -2,9 +2,9 @@ import subprocess
 import time
 
 server_scripts = [
-    "RabbitMQ/insult_producer.py",
-    "RabbitMQ/insult_broadcaster.py",
-    "RabbitMQ/insult_filter.py"
+    "REDIS/insult_producer.py",
+    "REDIS/insult_broadcaster.py",
+    "REDIS/insult_filter.py"
 ]
 
 processes = []

@@ -3,10 +3,10 @@ import time
 
 # Cada cliente lanzará estas tareas
 client_scripts = [
-    "RabbitMQ/insult_consumer.py",
-    "RabbitMQ/insult_subscriber.py",
-    "RabbitMQ/text_producer.py",
-    "RabbitMQ/angry_producer.py"
+    "REDIS/insult_consumer.py",
+    "REDIS/insult_subscriber.py",
+    "REDIS/text_producer.py",
+    "REDIS/angry_producer.py"
 ]
 
 # Número de clientes simultáneos

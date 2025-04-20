@@ -3,13 +3,11 @@ import insult_consumer, insult_subscriber, text_producer, angry_producer
 import time  # Importar módulo para medir tiempo
 
 # Número de instancias a lanzar por tipo
-NUM_CONSUMERS = 1
+
 NUM_RECEIVERS = 100
 NUM_TEXT_PRODUCERS = 5
 NUM_ANGRY_PRODUCERS = 5
 
-def run_insult_consumer():
-    insult_consumer.main()
 
 def run_insult_receiver():
     insult_subscriber.main()
@@ -27,11 +25,7 @@ if __name__ == '__main__':
     start_time = time.time()
 
     processes = []
-
-    # Consumidores de insultos (insult_consumer.py)
-    for _ in range(NUM_CONSUMERS):
-        processes.append(multiprocessing.Process(target=run_insult_consumer))
-
+    
     # Suscriptores (insult_receiver.py)
     for _ in range(NUM_RECEIVERS):
         processes.append(multiprocessing.Process(target=run_insult_receiver))
