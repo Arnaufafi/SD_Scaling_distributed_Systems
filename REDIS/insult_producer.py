@@ -1,33 +1,14 @@
-import pika
+import redis
 import time
-import random
 
-INSULTS = [
-    "idiot",
-    "stupid",
-    "dumb",
-    "fool",
-]
+# Connect to Redis
+client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
-def send_insult(channel):
-    insult = random.choice(INSULTS)
-    channel.basic_publish(exchange='', routing_key='insults', body=insult)
-    print(f"Sent insult: {insult}")
+queue_name = "insults"
 
-def main():
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-    channel = connection.channel()
+# Send multiple messages
+tasks = ["Bobo", "Vinicius", "Pozo", "Pozinho", "Pozão", "Pozudo", "Pozãozudo"]
 
-    channel.queue_declare(queue='insults')
-
-    try:
-        while True:
-            send_insult(channel)
-            time.sleep(5)
-    except KeyboardInterrupt:
-        print("Producer stopped.")
-    finally:
-        connection.close()
-
-if __name__ == '__main__':
-    main()
+for task in tasks:
+    client.rpush(queue_name, task)
+    print(f"Produced: {task}")

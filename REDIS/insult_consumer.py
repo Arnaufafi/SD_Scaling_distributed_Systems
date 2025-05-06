@@ -1,29 +1,18 @@
-import pika
 import redis
 
-def main():
-    # Connect to Redis
-    r = redis.Redis(host='localhost', port=6379, db=0)
+# Connect to Redis
+client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
-    # Connect to RabbitMQ
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-    channel = connection.channel()
+queue_name = "insults"
+list_name = "insults_list"
+print("Consumer is waiting for tasks...")
 
-    channel.queue_declare(queue='insults')
-
-    def callback(ch, method, properties, body):
-        insult = body.decode('utf-8')
-        r.sadd('insults', insult)
-
-    channel.basic_consume(queue='insults', on_message_callback=callback, auto_ack=True)
-
-    print('Waiting for insults. To exit press CTRL+C')
-    try:
-        channel.start_consuming()
-    except KeyboardInterrupt:
-        print("Consumer stopped.")
-    finally:
-        connection.close()
-
-if __name__ == '__main__':
-    main()
+while True:
+    task = client.blpop(queue_name, timeout=1)  # Wait up to 1 second
+    if task:
+        insult = task[1]
+        client.sadd(list_name, insult)
+        print(f"Consumed and added: {insult}")
+    else:
+        print("No tasks received in the last second. Shutting down.")
+        break

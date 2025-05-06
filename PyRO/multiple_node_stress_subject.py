@@ -2,9 +2,10 @@ import Pyro4
 import threading
 import time
 import random
+import matplotlib.pyplot as plt
 
 
-NUM_CLIENTES = 500
+NUM_CLIENTES = 200
 SERVER_NAMES = ["server1.observable", "server2.observable", "server3.observable"]
 
 fake_insults = [f"insult_{i}" for i in range(100)]
@@ -56,7 +57,7 @@ def stress_test(n_nodes):
     start = time.time()
 
     for i in range(NUM_CLIENTES):
-        selected_server = random.choice(server_names)
+        selected_server = server_names[i % len(server_names)]
         t = threading.Thread(target=simulated_client, args=(i, selected_server))
         threads.append(t)
         t.start()
@@ -70,8 +71,32 @@ def stress_test(n_nodes):
 
 # === Ejecutar test con 1, 2, 3 nodos ===
 if __name__ == "__main__":
-    tiempos = []
-    for n in [1, 2, 3]:
-        tiempo = stress_test(n)
-        tiempos.append(tiempo)
-    print(f"\nResultados: {tiempos}")
+    nodos = [1, 2, 3]
+    tiempos = [stress_test(n) for n in nodos]
+
+    # Calcular speedups
+    t1 = tiempos[0]
+    speedups = [t1 / t if t != 0 else 0 for t in tiempos]
+
+    # === Gráficos ===
+    plt.figure(figsize=(12, 5))
+
+    # Gráfico 1: Tiempo de ejecución
+    plt.subplot(1, 2, 1)
+    plt.plot(nodos, tiempos, marker='o', color='blue')
+    plt.title("Tiempo de ejecución vs Nodos")
+    plt.xlabel("Número de nodos")
+    plt.ylabel("Tiempo (segundos)")
+    plt.grid(True)
+
+    # Gráfico 2: Speedup
+    plt.subplot(1, 2, 2)
+    plt.plot(nodos, speedups, marker='o', color='green')
+    plt.title("Speedup vs Nodos")
+    plt.xlabel("Número de nodos")
+    plt.ylabel("Speedup (T1 / Tn)")
+    plt.grid(True)
+
+    plt.tight_layout()
+    plt.show()
+

@@ -1,15 +1,15 @@
-import pika
+import redis
+import time
 
-# Connect to RabbitMQ
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-channel = connection.channel()
+# Connect to Redis
+client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
-# Declare a queue
-channel.queue_declare(queue='hello')
+queue_name = "task_queue"
 
-# Publish a message
-channel.basic_publish(exchange='', routing_key='hello', body='Hello, RabbitMQ!')
-print(" [x] Sent 'Hello, RabbitMQ!'")
+# Send multiple messages
+tasks = ["Task 1", "Task 2", "Task 3"]
 
-# Close connection
-connection.close()
+for task in tasks:
+    client.rpush(queue_name, task)
+    print(f"Produced: {task}")
+    time.sleep(1)  # Simulating a delay in task production

@@ -19,13 +19,11 @@ def main():
     # Get all insults from Redis
     insults = r.smembers('insults')
 
-    while True:
+    for _ in range(1):  # o más si quieres
         insult = random.sample(list(insults), 1)[0]
         message = insult.decode('utf-8')
         channel.basic_publish(exchange=EXCHANGE_NAME, routing_key='', body=message)
         print(f"[Broadcaster] Sent: {message}")
-        time.sleep(5)  # Optional: Delay between messages
-        insults = r.smembers('insults')
     connection.close()
 
 if __name__ == '__main__':

@@ -1,29 +1,14 @@
-import pika
+import redis
 import time
-import random
 
-QUEUE_NAME = 'text_queue'
-CLEAN_TEXTS = [
-    "Have a wonderful day!",
-    "You are doing great!",
-    "Keep up the good work!",
-    "It's sunny outside!",
-    "Coding is fun and rewarding."
-]
+# Connect to Redis
+client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
-def main():
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-    channel = connection.channel()
-    channel.queue_declare(queue=QUEUE_NAME)
+queue_name = "work_queue"
 
-    try:
-        text = random.choice(CLEAN_TEXTS)
-        channel.basic_publish(exchange='', routing_key=QUEUE_NAME, body=text.encode())
-        print(f"[TextProducer] Sent: {text}")
-        time.sleep(5)
-    except KeyboardInterrupt:
-        print("TextProducer stopped.")
-        connection.close()
+# Send multiple messages
+tasks = ["Redis", "Bloquejant", "Consumidor", "Productor", "Cua", "Tasca", "Consumida", "Produïda"]
 
-if __name__ == '__main__':
-    main()
+for task in tasks:
+    client.rpush(queue_name, task)
+    print(f"Produced: {task}")

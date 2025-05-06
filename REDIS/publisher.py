@@ -1,17 +1,17 @@
-import pika
+import redis
+import time
 
-# Connect to RabbitMQ
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-channel = connection.channel()
+# Connect to Redis
+client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
-# Declare a fanout exchange
-channel.exchange_declare(exchange='logs', exchange_type='fanout')
+channel_name = "news_channel"
 
-# Publish a message
-message = "Hello, all consumers!"
-channel.basic_publish(exchange='logs', routing_key='', body=message)
+# Publish multiple messages
+messages = ["Breaking News: Market hits new high!", 
+            "Weather Update: Heavy rain expected", 
+            "Sports: Local team wins championship"]
 
-print(f" [x] Sent '{message}'")
-
-# Close connection
-connection.close()
+for message in messages:
+    client.publish(channel_name, message)
+    print(f"Published: {message}")
+    time.sleep(2)  # Simulating delay between messages

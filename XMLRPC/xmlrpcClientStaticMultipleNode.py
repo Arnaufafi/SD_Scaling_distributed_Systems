@@ -2,6 +2,7 @@ import xmlrpc.client
 import threading
 import time
 import random
+import matplotlib.pyplot as plt
 
 # Configuración
 ALL_SERVER_URLS = [
@@ -10,12 +11,12 @@ ALL_SERVER_URLS = [
     'http://localhost:8002'
 ]
 
-OBSERVER_URLS = [
-    'http://localhost:8010',
-    'http://localhost:8011',
-]
+#OBSERVER_URLS = [
+#    'http://localhost:8010',
+#    'http://localhost:8011',
+#]
 
-NUM_CLIENTES = 500
+NUM_CLIENTES = 200
 fake_insults = [f"insult_{i}" for i in range(100)]
 sample_texts = [
     "Ets un TAP DE BASSA i un GAMARÚS!",
@@ -50,18 +51,18 @@ def stress_test(n_nodes):
 
     # Suscribir observadores al nodo principal
     main = xmlrpc.client.ServerProxy(server_urls[0])
-    for url in OBSERVER_URLS:
-        try:
-            main.subscribe(url.split('//')[1])
-        except:
-            pass
+    #for url in OBSERVER_URLS:
+    #    try:
+    #        main.subscribe(url.split('//')[1])
+    #    except:
+    #        pass
 
     # Suscribir nodos entre sí
-    for url in server_urls[1:]:
-        try:
-            main.subscribeServer(url.split('//')[1])
-        except:
-            pass
+    #for url in server_urls[1:]:
+    #    try:
+    #        main.subscribeServer(url.split('//')[1])
+    #    except:
+    #        pass
 
     threads = []
     start = time.time()
@@ -82,9 +83,31 @@ def stress_test(n_nodes):
     return duration
 
 # Ejecutar tests con 1, 2 y 3 nodos
-tiempos = []
-for n in [1, 2, 3]:
-    tiempo = stress_test(n)
-    tiempos.append(tiempo)
+nodos = [1, 2, 3]
+tiempos = [stress_test(n) for n in nodos]
 
-print(tiempos)
+# Calcular speedups
+t1 = tiempos[0]
+speedups = [t1 / t for t in tiempos]
+
+# === Gráficos ===
+plt.figure(figsize=(12, 5))
+
+# Tiempo de ejecución
+plt.subplot(1, 2, 1)
+plt.plot(nodos, tiempos, marker='o', color='blue')
+plt.title("Tiempo de ejecución vs Nodos")
+plt.xlabel("Número de nodos")
+plt.ylabel("Tiempo (segundos)")
+plt.grid(True)
+
+# Speedup
+plt.subplot(1, 2, 2)
+plt.plot(nodos, speedups, marker='o', color='green')
+plt.title("Speedup vs Nodos")
+plt.xlabel("Número de nodos")
+plt.ylabel("Speedup (T1 / Tn)")
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()

@@ -1,18 +1,13 @@
-import pika
+import redis
 
-# Connect to RabbitMQ
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-channel = connection.channel()
+# Connect to Redis
+client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
-# Declare a queue (ensure it exists)
-channel.queue_declare(queue='hello')
+queue_name = "task_queue"
 
-# Define the callback function
-def callback(ch, method, properties, body):
-    print(f" [x] Received {body.decode()}")
+print("Consumer is waiting for tasks...")
 
-# Consume messages
-channel.basic_consume(queue='hello', on_message_callback=callback, auto_ack=True)
-
-print(' [*] Waiting for messages. To exit, press CTRL+C')
-channel.start_consuming()
+while True:
+    task = client.blpop(queue_name, timeout=0)  # Blocks indefinitely until a task is available
+    if task:
+        print(f"Consumed: {task[1]}")

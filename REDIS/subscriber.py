@@ -1,25 +1,18 @@
-import pika
+import redis
 
-# Connect to RabbitMQ
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-channel = connection.channel()
+# Connect to Redis
+client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
-# Declare exchange
-channel.exchange_declare(exchange='logs', exchange_type='fanout')
+channel_name = "news_channel"
 
-# Create a new temporary queue (random name, auto-delete when consumer disconnects)
-result = channel.queue_declare(queue='', exclusive=True)
-queue_name = result.method.queue
+# Subscribe to channel
+pubsub = client.pubsub()
+pubsub.subscribe(channel_name)
 
-# Bind the queue to the exchange
-channel.queue_bind(exchange='logs', queue=queue_name)
+print(f"Subscribed to {channel_name}, waiting for messages...")
 
-print(' [*] Waiting for messages. To exit, press CTRL+C')
+# Continuously listen for messages
+for message in pubsub.listen():
+    if message["type"] == "message":
+        print(f"Received: {message['data']}")
 
-# Define callback function
-def callback(ch, method, properties, body):
-    print(f" [x] Received {body.decode()}")
-
-# Consume messages
-channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=True)
-channel.start_consuming()
