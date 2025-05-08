@@ -9,14 +9,14 @@ connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
 channel = connection.channel()
 queue_name = 'text_queue'
 result_queue = 'RESULTS'
-channel.queue_delete(queue=queue_name)
-channel.queue_delete(queue=result_queue)
 
 NUM_EXECUTIONS = 200
-client_scripts = ["RABBITMQ/text_producer.py"] * NUM_EXECUTIONS + ["RABBITMQ/angry_producer.py"] * NUM_EXECUTIONS + ["RABBITMQ/insult_producer.py"] * 50
+client_scripts = ["RABBITMQ/text_producer.py"] * NUM_EXECUTIONS + ["RABBITMQ/angry_producer.py"] * NUM_EXECUTIONS
 
 def run_script(script):
-    subprocess.Popen(["python3", script])
+    p= subprocess.Popen(["python3", script])
+    p.wait()
+    
 
 
 def fill_queue():
@@ -48,7 +48,7 @@ def run_servers(n):
         p.wait()
 
     end_time = time.time()
-    elapsed = end_time - start_time - 1
+    elapsed = end_time - start_time 
     print(f"[server] {n} server(s) finished in {elapsed:.2f} seconds.")
     return elapsed
 
@@ -58,8 +58,6 @@ times = {}
 # Ejecutar pruebas con 1, 2 y 3 servidores
 for n_servers in [1, 2, 3]:
     fill_queue()
-    with ThreadPoolExecutor(max_workers=1000) as executor:
-        executor.map(run_script, client_scripts)
     elapsed_time = run_servers(n_servers)
     times[n_servers] = elapsed_time
 

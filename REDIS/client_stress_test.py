@@ -12,7 +12,6 @@ censor_list = "insults_list"
 
 NUM_EXECUTIONS = 200
 client_scripts = ["REDIS/text_producer.py"] * NUM_EXECUTIONS + ["REDIS/angry_producer.py"] * NUM_EXECUTIONS
-
 def run_script(script):
     subprocess.run(["python3", script])
     time.sleep(0.01)
@@ -47,7 +46,7 @@ def run_servers(n):
         p.wait()
 
     end_time = time.time()
-    elapsed = end_time - start_time - 1  # -1s compensation for startup delay
+    elapsed = end_time - start_time   # -1s compensation for startup delay
     print(f"[server] {n} server(s) finished in {elapsed:.2f} seconds.")
     return elapsed
 

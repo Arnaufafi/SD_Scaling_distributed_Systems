@@ -1,59 +1,51 @@
 import pika
 import redis
-import time
 
+# Configuración
 QUEUE_NAME = 'text_queue'
-RESULT_QUEUE = 'RESULTS'
-INSULT_REFRESH_INTERVAL = 10  # segundos
+RESULT_NAME = 'RESULTS'
+CENSOR_LIST = 'insults'
+WAIT_TIMEOUT = 1  # segundos
+MAX_IDLE_CHECKS = 5  # Para salir si la cola permanece vacía
 
-def connect_redis():
-    return redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+# Conexión a Redis
+client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
-def refresh_insults(r):
-    return set(r.smembers('insults'))
+# Conexión a RabbitMQ
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+channel = connection.channel()
+channel.queue_declare(queue=QUEUE_NAME, durable=False)
+channel.basic_qos(prefetch_count=1)
 
-def process_message(body, insults):
-    words = body.split()
-    return ' '.join('CENSORED' if word in insults else word for word in words)
+print("Consumer is waiting for tasks...")
 
-def main():
-    r = connect_redis()
-    insults = refresh_insults(r)
-    last_refresh = time.time()
+idle_checks = 0
 
-    def callback(ch, method, properties, body):
-        nonlocal insults, last_refresh
+def process_and_store(message):
+    insults = client.smembers(CENSOR_LIST)  # Obtener todos los insultos solo una vez
+    words = message.split()
+    censored = [
+        '****' if word in insults else word
+        for word in words
+    ]
+    result = ' '.join(censored)
+    client.sadd(RESULT_NAME, result)
+    print(f"Consumed and added: {result}")
 
-        body_str = body.decode('utf-8')
 
-        # Refresh insults list periodically
-        now = time.time()
-        if now - last_refresh > INSULT_REFRESH_INTERVAL:
-            insults = refresh_insults(r)
-            last_refresh = now
+while idle_checks < MAX_IDLE_CHECKS:
+    method_frame, properties, body = channel.basic_get(queue=QUEUE_NAME, auto_ack=False)
 
-        cleaned = process_message(body_str, insults)
+    if method_frame:
+        idle_checks = 0  # reset si se recibe algo
+        message = body.decode('utf-8')
+        process_and_store(message)
+        channel.basic_ack(delivery_tag=method_frame.delivery_tag)
+    else:
+        idle_checks += 1
 
-        # Store result
-        r.rpush(RESULT_QUEUE, cleaned)
-        print(f"[Filter] Cleaned: {cleaned}")
+# Cierre limpio
+print("No more tasks. Exiting.")
 
-        ch.basic_ack(delivery_tag=method.delivery_tag)
-
-    # RabbitMQ setup
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-    channel = connection.channel()
-    channel.queue_declare(queue=QUEUE_NAME, durable=True)
-    channel.basic_qos(prefetch_count=1)
-    channel.basic_consume(queue=QUEUE_NAME, on_message_callback=callback)
-
-    print("[Filter] Waiting for messages...")
-    try:
-        channel.start_consuming()
-    except KeyboardInterrupt:
-        channel.stop_consuming()
-    finally:
-        connection.close()
-
-if __name__ == '__main__':
-    main()
+channel.close()
+connection.close()

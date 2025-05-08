@@ -1,29 +1,37 @@
 import pika
 import redis
+import time
+
+WAIT_TIMEOUT = 1  # segundos entre intentos
+MAX_IDLE_CHECKS = 5  # número máximo de intentos sin recibir mensajes
 
 def main():
-    # Connect to Redis
-    r = redis.Redis(host='localhost', port=6379, db=0)
+    # Conectar a Redis
+    r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
-    # Connect to RabbitMQ
+    # Conectar a RabbitMQ
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
-
     channel.queue_declare(queue='insults')
+    channel.basic_qos(prefetch_count=1)
 
-    def callback(ch, method, properties, body):
-        insult = body.decode('utf-8')
-        r.sadd('insults', insult)
+    print('Waiting for insults...')
 
-    channel.basic_consume(queue='insults', on_message_callback=callback, auto_ack=True)
+    idle_checks = 0
 
-    print('Waiting for insults. To exit press CTRL+C')
-    try:
-        channel.start_consuming()
-    except KeyboardInterrupt:
-        print("Consumer stopped.")
-    finally:
-        connection.close()
+    while idle_checks < MAX_IDLE_CHECKS:
+        method_frame, properties, body = channel.basic_get(queue='insults', auto_ack=True)
+        if method_frame:
+            idle_checks = 0  # reiniciar contador si hay mensaje
+            insult = body.decode('utf-8')
+            r.sadd('insults', insult)
+            print(f"Received and stored insult: {insult}")
+        else:
+            idle_checks += 1
+
+    print("No more insults. Exiting.")
+    channel.close()
+    connection.close()
 
 if __name__ == '__main__':
     main()
