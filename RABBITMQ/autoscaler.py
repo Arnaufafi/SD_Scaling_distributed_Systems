@@ -1,94 +1,97 @@
 import subprocess
 import time
-import pika
-import requests
-import math
-from concurrent.futures import ThreadPoolExecutor
 import matplotlib.pyplot as plt
+from threading import Thread
+import requests
+from requests.auth import HTTPBasicAuth
 
-# Configuración
-QUEUE_NAME = 'text_queue'
-RESULT_QUEUE = 'RESULTS'
-RABBIT_API_URL = 'http://localhost:15672/api/queues/%2F/text_queue'
-USERNAME = 'guest'
-PASSWORD = 'guest'
-LOAD_PER_WORKER = 25  # C: capacidad de un worker
+# Parámetros del sistema
+C = 5        # Capacidad de cada nodo (mensajes concurrentes)
+T = 0.5      # Tiempo medio por mensaje (en segundos)
+CHECK_INTERVAL = 5  # Intervalo de comprobación (s)
+MAX_NODES = 20
+QUEUE_NAME = "text_queue"
 
-NUM_EXECUTIONS = 200
-client_scripts = (
-    ["RABBITMQ/text_producer.py"] * NUM_EXECUTIONS +
-    ["RABBITMQ/angry_producer.py"] * NUM_EXECUTIONS +
-    ["RABBITMQ/insult_producer.py"] * 50
-)
 
-def get_L():
+# Seguimiento para gráfico
+time_points = []
+node_counts = []
+
+# Procesos de nodos activos
+active_nodes = []
+
+def get_arrival_rate(queue_name='text_queue'):
+    """Consulta la API REST de RabbitMQ para obtener L (mensajes/segundo)."""
+    url = f'http://localhost:15672/api/queues/%2F/{queue_name}'
+    auth = HTTPBasicAuth('guest', 'guest')
+
     try:
-        res = requests.get(RABBIT_API_URL, auth=(USERNAME, PASSWORD)).json()
-        return int(res['messages_ready'])  # mensajes listos para ser procesados
+        response = requests.get(url, auth=auth)
+        response.raise_for_status()
+        data = response.json()
+        rate = data.get('messages_details', {}).get('rate', 0.0)
+        return rate
     except Exception as e:
-        print(f"[Error] No se pudo obtener L: {e}")
-        return 0
+        print("Error al obtener arrival rate desde la API de RabbitMQ:", e)
+        return 0.0
 
-def estimate_T():
-    # Simulación de tiempo medio por mensaje, ajusta si lo conoces mejor
-    return 1.0  # segundos por mensaje (puedes estimarlo dinámicamente si tienes logs)
+def launch_node():
+    """Lanza un nuevo nodo insult_filter.py."""
+    p = subprocess.Popen(["python3", "RABBITMQ/insult_filter.py"])
+    active_nodes.append(p)
 
-def calculate_workers(L, T):
-    N = (L * T) / LOAD_PER_WORKER
-    return max(1, math.ceil(N))
+def kill_node():
+    """Termina un nodo insult_filter.py."""
+    if active_nodes:
+        p = active_nodes.pop()
+        p.terminate()
 
-def run_script(script):
-    p = subprocess.Popen(["python3", script])
-    p.wait()
-
-def fill_queue():
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-    channel = connection.channel()
-    channel.queue_delete(queue=QUEUE_NAME)
-    channel.queue_delete(queue=RESULT_QUEUE)
-    connection.close()
-
-    print("[client] Llenando la cola con tareas...")
-    with ThreadPoolExecutor(max_workers=1000) as executor:
-        executor.map(run_script, client_scripts)
-    print("[client] Cola llena.")
-
-def run_dynamic_servers():
-    L = get_L()
-    T = estimate_T()
-    workers = calculate_workers(L, T)
-    print(f"[server] Carga detectada: L={L}, T={T:.2f} -> lanzando {workers} workers.")
-
-    server_processes = []
+def scaler_loop():
+    """Bucle principal del autoscaler."""
     start_time = time.time()
+    L=1
+    while True:
+        
+        N = int((L * T) / C)
+        N = max(1, min(N, MAX_NODES))
 
-    for _ in range(workers):
-        p = subprocess.Popen(["python3", "RABBITMQ/server1.py"])
-        server_processes.append(p)
+        # Escalado hacia arriba
+        while len(active_nodes) < N:
+            launch_node()
 
-    for p in server_processes:
-        p.wait()
+        # Escalado hacia abajo
+        while len(active_nodes) > N:
+            kill_node()
 
-    end_time = time.time()
-    elapsed = end_time - start_time
-    print(f"[server] {workers} server(s) finished in {elapsed:.2f} seconds.")
-    return workers, elapsed
+        elapsed = round(time.time() - start_time, 1)
+        time_points.append(elapsed)
+        node_counts.append(len(active_nodes))
 
-# Ejecutar prueba con escalado dinámico
-fill_queue()
-start = time.time()
-workers_used, elapsed_time = run_dynamic_servers()
-end = time.time()
+        print(f"[{elapsed}s] Llegada: {L:.2f} msg/s | Nodos activos: {len(active_nodes)}")
 
-# Mostrar resultados
-print("\n[results] Dynamic Scaling:")
-print(f"  Workers usados: {workers_used}")
-print(f"  Tiempo total: {elapsed_time:.2f} segundos")
+        L = get_arrival_rate(QUEUE_NAME)  # Mensajes por segundo
+        time.sleep(CHECK_INTERVAL)
 
-# Gráfico
-plt.figure(figsize=(6, 4))
-plt.bar(["Ejecución dinámica"], [elapsed_time], color='blue')
-plt.title("Tiempo de ejecución con escalado dinámico")
-plt.ylabel("Tiempo (segundos)")
-plt.tight_layout()
-plt.show()
+def show_graph():
+    """Muestra el gráfico del número de nodos activos en el tiempo."""
+    plt.plot(time_points, node_counts, marker='o')
+    plt.xlabel("Tiempo (s)")
+    plt.ylabel("Nodos activos")
+    plt.title("Escalado dinámico de insult_filter.py")
+    plt.grid(True)
+    plt.show()
+
+if __name__ == "__main__":
+    try:
+        p = subprocess.Popen(["python3", "RABBITMQ/dinamic_clients.py"])
+        active_nodes.append(p)
+        thread = Thread(target=scaler_loop)
+        thread.start()
+        thread.join()
+    except KeyboardInterrupt:
+        print("Terminando escalador...")
+
+    for p in active_nodes:
+        p.terminate()
+
+    show_graph()
