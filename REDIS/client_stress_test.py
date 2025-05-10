@@ -4,7 +4,7 @@ import redis
 from concurrent.futures import ThreadPoolExecutor
 import matplotlib.pyplot as plt
 
-# Redis config
+# Redis configuration
 client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 queue_name = "work_queue"
 result_name = "result_list"
@@ -12,6 +12,7 @@ censor_list = "insults_list"
 
 NUM_EXECUTIONS = 200
 client_scripts = ["REDIS/text_producer.py"] * NUM_EXECUTIONS + ["REDIS/angry_producer.py"] * NUM_EXECUTIONS
+
 def run_script(script):
     subprocess.run(["python3", script])
     time.sleep(0.01)
@@ -38,7 +39,7 @@ def run_servers(n):
     start_time = time.time()
 
     for _ in range(n):
-        p = subprocess.Popen(["python3", "REDIS/server1.py"])
+        p = subprocess.Popen(["python3", "REDIS/server.py"])
         server_processes.append(p)
 
     # Wait for all servers to finish
@@ -46,7 +47,7 @@ def run_servers(n):
         p.wait()
 
     end_time = time.time()
-    elapsed = end_time - start_time   # -1s compensation for startup delay
+    elapsed = end_time - start_time 
     print(f"[server] {n} server(s) finished in {elapsed:.2f} seconds.")
     return elapsed
 
@@ -66,24 +67,25 @@ for n in [1, 2, 3]:
     speedup = baseline / times[n]
     print(f"  {n} server(s): {times[n]:.2f} sec | speed-up: {speedup:.2f}x")
 
-nodos = [1, 2, 3]
-tiempos = [times[n] for n in nodos]
-speedups = [baseline / times[n] for n in nodos]
+nodes = [1, 2, 3]
+times_list = [times[n] for n in nodes]
+speedups = [baseline / times[n] for n in nodes]
+
 plt.figure(figsize=(12, 5))
 
-# Gráfico 1: Tiempo de ejecución
+# Chart 1: Execution time
 plt.subplot(1, 2, 1)
-plt.plot(nodos, tiempos, marker='o', color='blue')
-plt.title("Tiempo de ejecución vs Nodos")
-plt.xlabel("Número de nodos")
-plt.ylabel("Tiempo (segundos)")
+plt.plot(nodes, times_list, marker='o', color='blue')
+plt.title("Execution Time vs Nodes")
+plt.xlabel("Number of Nodes")
+plt.ylabel("Time (seconds)")
 plt.grid(True)
 
-# Gráfico 2: Speedup
+# Chart 2: Speedup
 plt.subplot(1, 2, 2)
-plt.plot(nodos, speedups, marker='o', color='green')
-plt.title("Speedup vs Nodos")
-plt.xlabel("Número de nodos")
+plt.plot(nodes, speedups, marker='o', color='green')
+plt.title("Speedup vs Nodes")
+plt.xlabel("Number of Nodes")
 plt.ylabel("Speedup (T1 / Tn)")
 plt.grid(True)
 

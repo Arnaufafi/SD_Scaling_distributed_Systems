@@ -1,6 +1,5 @@
 import pika
 import redis
-import time
 import random
 
 EXCHANGE_NAME = 'insult_broadcast'
@@ -19,7 +18,7 @@ def main():
     # Get all insults from Redis
     insults = r.smembers('insults')
 
-    for _ in range(1):  # o más si quieres
+    for _ in range(1): 
         insult = random.sample(list(insults), 1)[0]
         message = insult.decode('utf-8')
         channel.basic_publish(exchange=EXCHANGE_NAME, routing_key='', body=message)

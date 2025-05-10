@@ -1,14 +1,12 @@
-# RABBITMQ/server_launcher.py
 import subprocess
 
 server_scripts = [
-    "RABBITMQ/insult_consumer.py",
-    "RABBITMQ/insult_filter.py",
+    "REDIS/insult_filter.py"
 ]
 
 processes = []
 
-print("[server] Starting RabbitMQ server tasks...")
+print("[server] Starting server tasks...")
 
 for script in server_scripts:
     print(f"[server] Running {script}...")
@@ -19,4 +17,4 @@ for script in server_scripts:
 for p in processes:
     p.wait()
 
-print("[server] All RabbitMQ server tasks completed.")
+print("[server] All server tasks completed.")

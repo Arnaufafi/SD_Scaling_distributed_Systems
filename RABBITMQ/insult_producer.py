@@ -22,7 +22,6 @@ def main():
     try:
         for _ in range(10):
             send_insult(channel)
-            #time.sleep(5)
     except KeyboardInterrupt:
         print("Producer stopped.")
     finally:

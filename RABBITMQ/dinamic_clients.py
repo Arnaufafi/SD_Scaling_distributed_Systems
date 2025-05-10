@@ -1,6 +1,7 @@
 import subprocess
 import time
 import pika
+import random
 from concurrent.futures import ThreadPoolExecutor
 
 # Configuración de RabbitMQ
@@ -12,24 +13,27 @@ channel.queue_delete(queue=queue_name)
 channel.queue_delete(queue=result_queue)
 connection.close()
 
-NUM_EXECUTIONS = 200
-client_scripts = (
-    ["RABBITMQ/text_producer.py"] * NUM_EXECUTIONS +
-    ["RABBITMQ/angry_producer.py"] * NUM_EXECUTIONS +
-    ["RABBITMQ/insult_producer.py"] * 50
-)
-
 def run_script(script):
     p = subprocess.Popen(["python3", script])
     p.wait()
 
 def fill_queue():
-    print("[client] Filling the queue with tasks...")
-    start_time = time.time()
-    with ThreadPoolExecutor(max_workers=1000) as executor:
-        executor.map(run_script, client_scripts)
-    end_time = time.time()
-    print(f"[client] Queue filled in {end_time - start_time:.2f} seconds.")
+    for i in range(10):  # Ejecutar 3 veces
+        num_executions = random.randint(100, 300)
+        client_scripts = (
+            ["RABBITMQ/text_producer.py"] * num_executions +
+            ["RABBITMQ/angry_producer.py"] * num_executions +
+            ["RABBITMQ/insult_producer.py"]
+        )
+
+        print(f"[client] Iteración {i+1}: Llenando la cola con {num_executions} tareas...")
+        start_time = time.time()
+        with ThreadPoolExecutor(max_workers=1000) as executor:
+            executor.map(run_script, client_scripts)
+        end_time = time.time()
+        print(f"[client] Cola llena en {end_time - start_time:.2f} segundos.")
+
+        time.sleep(1)  # Pausa de 1 segundo
 
 if __name__ == '__main__':
     fill_queue()

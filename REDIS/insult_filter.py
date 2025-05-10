@@ -8,11 +8,13 @@ result_name = "result_list"
 censor_list = "insults_list"
 print("Consumer is waiting for tasks...")
 
+censor_words = client.smembers(censor_list)  # Obtener lista al abrir el servicio
+
 while True:
-    task = client.blpop(queue_name, timeout=1)  # Espera máximo 1 segundo por una tarea
+    task = client.blpop(queue_name, timeout=1)  
     if task:
         result = list(map(
-            lambda word: '****' if word in client.smembers(censor_list) else word,
+            lambda word: '****' if word in censor_words else word,  
             task[1].split()
         ))
         result = ' '.join(result)

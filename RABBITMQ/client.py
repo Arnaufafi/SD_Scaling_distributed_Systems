@@ -4,7 +4,7 @@ import pika
 from concurrent.futures import ThreadPoolExecutor
 import matplotlib.pyplot as plt
 
-# Configuración de RabbitMQ
+# RabbitMQ configuration
 connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
 channel = connection.channel()
 queue_name = 'text_queue'
@@ -14,13 +14,11 @@ NUM_EXECUTIONS = 200
 client_scripts = ["RABBITMQ/text_producer.py"] * NUM_EXECUTIONS + ["RABBITMQ/angry_producer.py"] * NUM_EXECUTIONS
 
 def run_script(script):
-    p= subprocess.Popen(["python3", script])
+    p = subprocess.Popen(["python3", script])
     p.wait()
-    
-
 
 def fill_queue():
-    # Eliminar estado anterior de las colas
+    # Delete previous state of queues
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
     channel.queue_delete(queue=queue_name)
@@ -40,10 +38,10 @@ def run_servers(n):
     start_time = time.time()
 
     for _ in range(n):
-        p = subprocess.Popen(["python3", "RABBITMQ/server1.py"])
+        p = subprocess.Popen(["python3", "RABBITMQ/server.py"])
         server_processes.append(p)
 
-    # Esperar a que terminen
+    # Wait for them to finish
     for p in server_processes:
         p.wait()
 
@@ -52,38 +50,38 @@ def run_servers(n):
     print(f"[server] {n} server(s) finished in {elapsed:.2f} seconds.")
     return elapsed
 
-# Diccionario de tiempos
+# Dictionary of times
 times = {}
 
-# Ejecutar pruebas con 1, 2 y 3 servidores
+# Run tests with 1, 2 and 3 servers
 for n_servers in [1, 2, 3]:
     fill_queue()
     elapsed_time = run_servers(n_servers)
     times[n_servers] = elapsed_time
 
-# Mostrar resultados
+# Show results
 print("\n[results] Time and speed-up:")
 baseline = times[1]
 for n in [1, 2, 3]:
     speedup = baseline / times[n]
     print(f"  {n} server(s): {times[n]:.2f} sec | speed-up: {speedup:.2f}x")
 
-nodos = [1, 2, 3]
-tiempos = [times[n] for n in nodos]
-speedups = [baseline / times[n] for n in nodos]
+nodes = [1, 2, 3]
+times_list = [times[n] for n in nodes]
+speedups = [baseline / times[n] for n in nodes]
 plt.figure(figsize=(12, 5))
 
 plt.subplot(1, 2, 1)
-plt.plot(nodos, tiempos, marker='o', color='blue')
-plt.title("Tiempo de ejecución vs Nodos (RabbitMQ)")
-plt.xlabel("Número de nodos")
-plt.ylabel("Tiempo (segundos)")
+plt.plot(nodes, times_list, marker='o', color='blue')
+plt.title("Execution Time vs Nodes (RabbitMQ)")
+plt.xlabel("Number of nodes")
+plt.ylabel("Time (seconds)")
 plt.grid(True)
 
 plt.subplot(1, 2, 2)
-plt.plot(nodos, speedups, marker='o', color='green')
-plt.title("Speedup vs Nodos (RabbitMQ)")
-plt.xlabel("Número de nodos")
+plt.plot(nodes, speedups, marker='o', color='green')
+plt.title("Speedup vs Nodes (RabbitMQ)")
+plt.xlabel("Number of nodes")
 plt.ylabel("Speedup (T1 / Tn)")
 plt.grid(True)
 

@@ -1,5 +1,4 @@
 import pika
-import time
 import random
 
 QUEUE_NAME = 'text_queue'

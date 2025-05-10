@@ -4,71 +4,51 @@ import time
 import random
 import matplotlib.pyplot as plt
 
-# Configuración
+# Configuration
 ALL_SERVER_URLS = [
     'http://localhost:8000',
     'http://localhost:8001',
     'http://localhost:8002'
 ]
 
-#OBSERVER_URLS = [
-#    'http://localhost:8010',
-#    'http://localhost:8011',
-#]
-
-NUM_CLIENTES = 200
+NUM_CLIENTS = 200
 fake_insults = [f"insult_{i}" for i in range(100)]
 sample_texts = [
-    "Ets un TAP DE BASSA i un GAMARÚS!",
-    "Cap de suro, què fas?",
-    "AIXAFAGUITARRES total",
-    "Simplement insult_42 i insult_13",
-    "Tot correcte, res d'insults aquí"
+    "You are a TAP DE BASSA and a GAMARÚS!",
+    "Blockhead, what are you doing?",
+    "A total AIXAFAGUITARRES",
+    "Simply insult_42 and insult_13",
+    "All good, no insults here"
 ]
 
 def simulated_client(index, server_url):
     try:
         proxy = xmlrpc.client.ServerProxy(server_url)
 
-        # Añadir insulto
+        # Add insult
         insult = random.choice(fake_insults)
         proxy.add_insults(insult)
 
-        # Enviar texto aleatorio con insultos
+        # Send random text with insults
         text = random.choice(sample_texts) + f" {insult}"
         proxy.enviar_texto(text)
 
-        # Obtener resultados filtrados
+        # Get filtered results
         filtered = proxy.get_filtered()
-        print(f"[Cliente {index}] ({server_url}) Último resultado filtrado: {filtered[-1] if filtered else 'Vacío'}")
+        print(f"[Client {index}] ({server_url}) Last filtered result: {filtered[-1] if filtered else 'Empty'}")
 
     except Exception as e:
-        print(f"[Cliente {index}] Error: {e}")
+        print(f"[Client {index}] Error: {e}")
 
 def stress_test(n_nodes):
-    print(f"\n=== Iniciando test con {n_nodes} nodo(s) ===")
+    print(f"\n=== Starting test with {n_nodes} node(s) ===")
     server_urls = ALL_SERVER_URLS[:n_nodes]
-
-    # Suscribir observadores al nodo principal
-    main = xmlrpc.client.ServerProxy(server_urls[0])
-    #for url in OBSERVER_URLS:
-    #    try:
-    #        main.subscribe(url.split('//')[1])
-    #    except:
-    #        pass
-
-    # Suscribir nodos entre sí
-    #for url in server_urls[1:]:
-    #    try:
-    #        main.subscribeServer(url.split('//')[1])
-    #    except:
-    #        pass
 
     threads = []
     start = time.time()
 
-    # Lanzar clientes distribuidos
-    for i in range(NUM_CLIENTES):
+    # Launch distributed clients
+    for i in range(NUM_CLIENTS):
         server_url = random.choice(server_urls)
         t = threading.Thread(target=simulated_client, args=(i, server_url))
         threads.append(t)
@@ -79,33 +59,33 @@ def stress_test(n_nodes):
 
     end = time.time()
     duration = end - start
-    print(f"Tiempo con {n_nodes} nodo(s): {duration:.2f} segundos")
+    print(f"Time with {n_nodes} node(s): {duration:.2f} seconds")
     return duration
 
-# Ejecutar tests con 1, 2 y 3 nodos
-nodos = [1, 2, 3]
-tiempos = [stress_test(n) for n in nodos]
+# Run tests with 1, 2, and 3 nodes
+nodes = [1, 2, 3]
+times = [stress_test(n) for n in nodes]
 
-# Calcular speedups
-t1 = tiempos[0]
-speedups = [t1 / t for t in tiempos]
+# Calculate speedups
+t1 = times[0]
+speedups = [t1 / t for t in times]
 
-# === Gráficos ===
+# === Charts ===
 plt.figure(figsize=(12, 5))
 
-# Tiempo de ejecución
+# Execution time
 plt.subplot(1, 2, 1)
-plt.plot(nodos, tiempos, marker='o', color='blue')
-plt.title("Tiempo de ejecución vs Nodos")
-plt.xlabel("Número de nodos")
-plt.ylabel("Tiempo (segundos)")
+plt.plot(nodes, times, marker='o', color='blue')
+plt.title("Execution Time vs Nodes")
+plt.xlabel("Number of Nodes")
+plt.ylabel("Time (seconds)")
 plt.grid(True)
 
 # Speedup
 plt.subplot(1, 2, 2)
-plt.plot(nodos, speedups, marker='o', color='green')
-plt.title("Speedup vs Nodos")
-plt.xlabel("Número de nodos")
+plt.plot(nodes, speedups, marker='o', color='green')
+plt.title("Speedup vs Nodes")
+plt.xlabel("Number of Nodes")
 plt.ylabel("Speedup (T1 / Tn)")
 plt.grid(True)
 
